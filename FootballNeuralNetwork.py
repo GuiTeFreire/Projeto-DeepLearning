@@ -63,3 +63,22 @@ y_pred = rf.predict(X_test)
 # Avaliar o modelo
 print(rf.score(X_test, y_test))
 print(classification_report(y_test, y_pred))
+
+# Exibir a importância das features
+features = pd.DataFrame(rf.feature_importances_, index=X.columns)
+print(features.head(5))
+
+# Treinar um novo modelo com os hiperparâmetros ajustados
+rf2 = RandomForestClassifier(n_estimators=1000,
+                             criterion='entropy',
+                             min_samples_split=10,
+                             max_depth=14,
+                             random_state=42)
+rf2.fit(X_train, y_train)
+
+# Fazer previsões com o novo modelo
+y_pred2 = rf2.predict(X_test)
+
+# Avaliar o novo modelo
+print(rf2.score(X_test, y_test))
+print(classification_report(y_test, y_pred2))
