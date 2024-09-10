@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from sklearn.metrics import confusion_matrix, classification_report
 from imblearn.over_sampling import SMOTE
+import matplotlib.pyplot as plt
 
 # Carregar o dataset
 dataset = pd.read_csv('C:/Users/guite/OneDrive/Documentos/Faculdade/6o Periodo/DL - Pedro/Projeto DeepLearning/datasets/results.csv', encoding='latin-1')
@@ -45,12 +45,15 @@ encoded_df = pd.DataFrame(encoded_features, columns=encoder.get_feature_names_ou
 # Concatenar as colunas codificadas com o dataset original (excluindo as colunas categóricas originais)
 dataset = pd.concat([dataset.drop(columns=categorical_columns), encoded_df], axis=1)
 
+# Remover colunas de gols
+dataset = dataset.drop(columns=['home_score', 'away_score'])
+
 # Separar as features (X) do target (y)
 X = dataset.drop(columns=['goal_difference'])
 y = dataset['goal_difference']
 
 # Dividir o dataset em treino e teste
-X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=17, test_size=0.4)
+X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=17, test_size=0.2)
 
 # Aplicar o StandardScaler
 scaler = StandardScaler()
@@ -61,17 +64,20 @@ X_test_scaled = scaler.transform(X_test)
 model = keras.Sequential()
 
 # Primeira camada densa com ReLU como função de ativação
-model.add(keras.layers.Dense(64, input_shape=(X_train_scaled.shape[1],), activation='relu'))
+model.add(keras.layers.Dense(128, input_shape=(X_train_scaled.shape[1],), activation='relu'))
 model.add(keras.layers.BatchNormalization())
 
 # Camadas adicionais
-model.add(keras.layers.Dense(64, activation='relu'))
+model.add(keras.layers.Dense(256, activation='relu'))
 model.add(keras.layers.BatchNormalization())
 
-model.add(keras.layers.Dense(64, activation='relu'))
+model.add(keras.layers.Dense(256, activation='relu'))
 model.add(keras.layers.BatchNormalization())
 
-model.add(keras.layers.Dense(64, activation='relu'))
+model.add(keras.layers.Dense(256, activation='relu'))
+model.add(keras.layers.BatchNormalization())
+
+model.add(keras.layers.Dense(128, activation='relu'))
 model.add(keras.layers.BatchNormalization())
 model.add(keras.layers.Dropout(0.2))
 
@@ -83,7 +89,7 @@ model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mae'])
 print(model.summary())
 
 # Treinamento
-model.fit(X_train_scaled, y_train, epochs=50, batch_size=32, validation_data=(X_test_scaled, y_test))
+history = model.fit(X_train_scaled, y_train, epochs=50, batch_size=32, validation_data=(X_test_scaled, y_test))
 
 # Avaliação
 loss, mae = model.evaluate(X_test_scaled, y_test)
@@ -91,3 +97,38 @@ print(f'Mean Absolute Error: {mae:.2f}')
 
 # Predições no conjunto de teste
 y_pred = model.predict(X_test_scaled)
+
+# Acessar o histórico
+loss = history.history['loss']
+val_loss = history.history['val_loss']
+mae = history.history['mae']
+val_mae = history.history['val_mae']
+
+# Plotar a perda (loss) ao longo das épocas
+plt.figure(figsize=(10, 6))
+plt.plot(loss, label='Perda no Treino')
+plt.plot(val_loss, label='Perda na Validação')
+plt.xlabel('Épocas')
+plt.ylabel('Perda')
+plt.title('Perda por Épocas de Treino e Validação')
+plt.legend()
+plt.show()
+
+# Plotar o MAE (Mean Absolute Error) ao longo das épocas
+plt.figure(figsize=(10, 6))
+plt.plot(mae, label='EMA no Treino')
+plt.plot(val_mae, label='EMA na Validação')
+plt.xlabel('Épocas')
+plt.ylabel('EMA')
+plt.title('EMA por Épocas de Treino e Validação')
+plt.legend()
+plt.show()
+
+# Histograma de erros por época (MAE)
+plt.hist(mae, bins=10, alpha=0.7, label='EMA no Treino')
+plt.hist(val_mae, bins=10, alpha=0.7, label='EMA na Validação')
+plt.xlabel('EMA')
+plt.ylabel('Frequência')
+plt.title('Distribuição do EMA pelas Épocas')
+plt.legend()
+plt.show()

@@ -47,6 +47,9 @@ encoded_df = pd.DataFrame(encoded_features, columns=encoder.get_feature_names_ou
 # Concatenar as colunas codificadas com o dataset original (excluindo as colunas categóricas originais)
 dataset = pd.concat([dataset.drop(columns=categorical_columns), encoded_df], axis=1)
 
+# Remover colunas de gols
+dataset = dataset.drop(columns=['home_score', 'away_score'])
+
 # Separar as features (X) do target (y)
 X = dataset.drop(columns=['result'])
 y = dataset['result']

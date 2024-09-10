@@ -6,6 +6,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.metrics import confusion_matrix, classification_report
 from imblearn.over_sampling import SMOTE
+import matplotlib.pyplot as plt
 
 # Carregar o dataset
 dataset = pd.read_csv('C:/Users/guite/OneDrive/Documentos/Faculdade/6o Periodo/DL - Pedro/Projeto DeepLearning/datasets/results.csv', encoding='latin-1')
@@ -49,12 +50,15 @@ encoded_df = pd.DataFrame(encoded_features, columns=encoder.get_feature_names_ou
 # Concatenar as colunas codificadas com o dataset original (excluindo as colunas categóricas originais)
 dataset = pd.concat([dataset.drop(columns=categorical_columns), encoded_df], axis=1)
 
+# Remover colunas de gols
+dataset = dataset.drop(columns=['home_score', 'away_score'])
+
 # Separar as features (X) do target (y)
 X = dataset.drop(columns=['result'])
 y = dataset['result']
 
 # Dividir o dataset em treino e teste
-X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=17, test_size=0.3)
+X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=17, test_size=0.2)
 
 # Aplicar SMOTE no conjunto de treinamento
 smote = SMOTE(random_state=42)
@@ -69,19 +73,20 @@ X_test_scaled = scaler.transform(X_test)
 model = keras.Sequential()
 
 # Primeira camada densa com ReLU como função de ativação
-model.add(keras.layers.Dense(64, input_shape=(1088,), activation='relu'))
+model.add(keras.layers.Dense(128, input_shape=(1086,), activation='relu'))
 model.add(keras.layers.BatchNormalization())
 
-# Segunda camada densa (camada oculta)
-model.add(keras.layers.Dense(64, activation='relu'))
+# Camadas adicionais
+model.add(keras.layers.Dense(256, activation='relu'))
 model.add(keras.layers.BatchNormalization())
 
-# Terceira camada densa (camada oculta)
-model.add(keras.layers.Dense(64, activation='relu'))
+model.add(keras.layers.Dense(256, activation='relu'))
 model.add(keras.layers.BatchNormalization())
 
-# Quarta camada densa (camada oculta)
-model.add(keras.layers.Dense(64, activation='relu'))
+model.add(keras.layers.Dense(256, activation='relu'))
+model.add(keras.layers.BatchNormalization())
+
+model.add(keras.layers.Dense(128, activation='relu'))
 model.add(keras.layers.BatchNormalization())
 model.add(keras.layers.Dropout(0.2))
 
@@ -94,10 +99,36 @@ print(model.summary())
 
 # Treinamento
 class_weights = {0: 1., 1: 2.3, 2: 1.2}
-model.fit(X_train_scaled, y_train_sm, epochs=50, batch_size=32,
+history = model.fit(X_train_scaled, y_train_sm, epochs=50, batch_size=32,
           validation_data=(X_test_scaled, y_test),
           class_weight=class_weights)
 
 # Avaliação
 loss, accuracy = model.evaluate(X_test, y_test)
 print(f'Acurácia: {accuracy*100:.2f}%')
+
+# Acessar os dados do histórico
+train_loss = history.history['loss']           # Perda (loss) no treino
+val_loss = history.history['val_loss']         # Perda (loss) na validação
+train_acc = history.history['accuracy']        # Acurácia no treino
+val_acc = history.history['val_accuracy']      # Acurácia na validação
+
+# Plotar a perda (loss) ao longo das épocas
+plt.figure(figsize=(10, 6))
+plt.plot(train_loss, label='Perda no Treino')
+plt.plot(val_loss, label='Perda na Validação')
+plt.xlabel('Épocas')
+plt.ylabel('Perda')
+plt.title('Perda por Épocas de Treino e Validação')
+plt.legend()
+plt.show()
+
+# Plotar a acurácia ao longo das épocas
+plt.figure(figsize=(10, 6))
+plt.plot(train_acc, label='Acurácia no Treino')
+plt.plot(val_acc, label='Acurácia na Validação')
+plt.xlabel('Épocas')
+plt.ylabel('Acurácia')
+plt.title('Acurácia por Épocas de Treino e Validação')
+plt.legend()
+plt.show()
